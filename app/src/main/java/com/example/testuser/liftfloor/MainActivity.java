@@ -81,7 +81,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         //SensorManager.SENSOR_STATUS_ACCURACY_HIGH=3;
-        TextView tv = (TextView)findViewById(R.id.acc);
-        tv.setText("acc="+accuracy);
+        //TextView tv = (TextView)findViewById(R.id.acc);
+        //tv.setText("acc="+accuracy);
     }
 }
