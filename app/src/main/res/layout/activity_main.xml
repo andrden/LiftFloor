@@ -19,8 +19,7 @@
             android:id="@+id/xyzAvg"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
-        <Button android:text="Reset avg"
-            android:onClick="resetAvg"
+        <Button android:text="Reset avg" android:id="@+id/btnStart"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>

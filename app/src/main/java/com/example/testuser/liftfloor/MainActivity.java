@@ -9,6 +9,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 
@@ -20,7 +21,10 @@ public class MainActivity extends ActionBarActivity {
     SensorEventListener accListener;
     long tprevAcc=System.currentTimeMillis();
 
-    float hmeter = 0;
+    double hmeter = 0;
+    double hmeterV = 0;
+    boolean avgEnabled=false;
+    boolean hmeterEnabled=false;
     Avg avgGravity = new Avg();
 
     class Avg{
@@ -42,9 +46,9 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public void resetAvg(View view) {
-        avgGravity.reset();
-    }
+//    public void resetAvg(View view) {
+//        avgGravity.reset();
+//    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,14 +65,23 @@ public class MainActivity extends ActionBarActivity {
                 float x = sensorEvent.values[0];
                 float y = sensorEvent.values[1];
                 float z = sensorEvent.values[2];
+                //Math.sqrt(x*x+y*y+z*z)
 
-                avgGravity.add(z);
-                TextView tvAvg = (TextView)findViewById(R.id.xyzAvg);
-                tvAvg.setText("avg="+avgGravity.avg()+" "+avgGravity.count);
+                if( avgEnabled ) {
+                    avgGravity.add(z);
+                    TextView tvAvg = (TextView) findViewById(R.id.xyzAvg);
+                    tvAvg.setText("avg=" + avgGravity.avg() + " " + avgGravity.count);
+                }
 
+                long dt = System.currentTimeMillis()-tprevAcc;
+                if( hmeterEnabled ) {
+                    hmeterV += (z - avgGravity.avg()) * dt / 1000;
+                    hmeter += hmeterV * dt / 1000;
 
-                TextView tv = (TextView)findViewById(R.id.xyz);
-                tv.setText(" dt="+(System.currentTimeMillis()-tprevAcc));
+                    TextView tv = (TextView) findViewById(R.id.xyz);
+                    tv.setText("Shift = "+(int)(hmeter*100) + " cm");
+                }
+
                 tprevAcc = System.currentTimeMillis();
             }
 
@@ -78,6 +91,26 @@ public class MainActivity extends ActionBarActivity {
         };
 
         senSensorManager.registerListener(accListener, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+
+        View.OnTouchListener btnTouch = new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int action = event.getAction();
+                if (action == MotionEvent.ACTION_DOWN) {
+                    avgGravity.reset();
+                    avgEnabled = true;
+                    hmeterEnabled = false;
+                }else if (action == MotionEvent.ACTION_UP) {
+                    avgEnabled = false;
+                    hmeterEnabled = true;
+                    hmeter = 0;
+                    hmeterV = 0;
+                }
+                return false;   //  the listener has NOT consumed the event, pass it on
+            }
+        };
+        findViewById(R.id.btnStart).setOnTouchListener(btnTouch);
+
     }
 
 
