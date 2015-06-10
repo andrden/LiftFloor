@@ -78,7 +78,7 @@ public class MainActivity extends ActionBarActivity {
 
             for( int i=0; i<accList.size(); i++ ){
                 int x = (int)(canvas.getWidth() * (1 + accList.get(i))/2);
-                canvas.drawCircle(x,i,3, paint);
+                canvas.drawCircle(x,i/2,2, paint);
             }
         }
     }
@@ -105,24 +105,24 @@ public class MainActivity extends ActionBarActivity {
                 float x = sensorEvent.values[0];
                 float y = sensorEvent.values[1];
                 float z = sensorEvent.values[2];
-                //Math.sqrt(x*x+y*y+z*z)
+                double accAll = Math.sqrt(x*x+y*y+z*z);
 
                 if( avgEnabled ) {
-                    avgGravity.add(z);
+                    avgGravity.add((float)accAll);
                     TextView tvAvg = (TextView) findViewById(R.id.xyzAvg);
                     tvAvg.setText(String.format("avg=%.3f %d", avgGravity.avg(), avgGravity.count));
                 }
 
                 long sec = (System.currentTimeMillis() - hmeterEnabledT0)/1000;
-                if( sec > 15 ){
+                if( sec > 20 ){
                     hmeterEnabledT0 = 0; // disabled
                 }
                 if( hmeterEnabledT0>0 ) {
                     long dtNanos = sensorEvent.timestamp - tprevAccNanos;
-                    double acc = z - avgGravity.avg();
+                    double acc = accAll - avgGravity.avg();
                     accMin = Math.min(acc, accMin);
                     accMax = Math.max(acc, accMax);
-                    if( accList.size()<500 ){
+                    if( accList.size()<1500 ){
                         accList.add(acc);
                         graph.postInvalidate();
                     }
