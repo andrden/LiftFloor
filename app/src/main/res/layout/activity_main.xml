@@ -9,10 +9,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical" >
-        <TextView android:text="@string/hello_world" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
         <TextView android:text="x y z"
             android:id="@+id/xyz"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <TextView android:text="x y z2"
+            android:id="@+id/xyz2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
         <TextView android:text="avg"
@@ -22,6 +24,11 @@
         <Button android:text="Reset avg" android:id="@+id/btnStart"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
+        <FrameLayout
+            android:id="@+id/graphLayout"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1"/>
     </LinearLayout>
 
 
