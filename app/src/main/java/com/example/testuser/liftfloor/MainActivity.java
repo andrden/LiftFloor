@@ -34,7 +34,10 @@ public class MainActivity extends ActionBarActivity {
     double hmeter = 0;
     double hmeterV = 0;
     double accMin, accMax;
+    long prevSecond, prevMeters;
     List<Double> accList = new ArrayList<>();
+    List<Integer> secChanges = new ArrayList<>();
+    List<Integer> meterChanges = new ArrayList<>();
 
     boolean avgEnabled=false;
     Avg avgGravity = new Avg();
@@ -59,9 +62,17 @@ public class MainActivity extends ActionBarActivity {
     }
 
     class Graph extends SurfaceView{
-        Paint paint = new Paint(){{
+        Paint paintGreen = new Paint(){{
             setStyle(Paint.Style.FILL);
             setColor(Color.GREEN);
+        }};
+        Paint paintRed = new Paint(){{
+            setStyle(Paint.Style.FILL);
+            setColor(Color.RED);
+        }};
+        Paint paintWhite = new Paint(){{
+            setStyle(Paint.Style.FILL);
+            setColor(Color.WHITE);
         }};
 
         public Graph(Context context) {
@@ -74,11 +85,17 @@ public class MainActivity extends ActionBarActivity {
 
         @Override
         protected void onDraw(Canvas canvas) {
-            canvas.drawCircle(50, 50, 30, paint);
+            canvas.drawCircle(50, 50, 30, paintGreen);
 
             for( int i=0; i<accList.size(); i++ ){
                 int x = (int)(canvas.getWidth() * (1 + accList.get(i))/2);
-                canvas.drawCircle(x,i/2,2, paint);
+                canvas.drawCircle(x,i/2,2, paintGreen);
+            }
+            for( int i : meterChanges ){
+                canvas.drawRect(0,i/2,50,i/2+2, paintRed);
+            }
+            for( int i : secChanges ){
+                canvas.drawRect(150,i/2,200,i/2+1, paintWhite);
             }
         }
     }
@@ -113,11 +130,13 @@ public class MainActivity extends ActionBarActivity {
                     tvAvg.setText(String.format("avg=%.3f %d", avgGravity.avg(), avgGravity.count));
                 }
 
-                long sec = (System.currentTimeMillis() - hmeterEnabledT0)/1000;
-                if( sec > 20 ){
-                    hmeterEnabledT0 = 0; // disabled
-                }
                 if( hmeterEnabledT0>0 ) {
+                    long sec = (System.currentTimeMillis() - hmeterEnabledT0)/1000;
+                    boolean secChange = prevSecond != sec;
+                    prevSecond = sec;
+                    if( sec > 20 ){
+                        hmeterEnabledT0 = 0; // disabled
+                    }
                     long dtNanos = sensorEvent.timestamp - tprevAccNanos;
                     double acc = accAll - avgGravity.avg();
                     accMin = Math.min(acc, accMin);
@@ -128,6 +147,12 @@ public class MainActivity extends ActionBarActivity {
                     }
                     hmeterV += acc * dtNanos / 1_000_000_000;
                     hmeter += hmeterV * dtNanos / 1_000_000_000;
+                    long newHmeter = (int)Math.abs(hmeter);
+                    boolean meterChange = prevMeters != newHmeter;
+                    prevMeters = newHmeter;
+
+                    if( secChange ) secChanges.add(accList.size());
+                    if( meterChange ) meterChanges.add(accList.size());
 
                     TextView tv = (TextView) findViewById(R.id.xyz);
                     tv.setText(String.format("Shift %.2f m, acc %.2f .. %.2f",hmeter, accMin, accMax));
@@ -160,7 +185,11 @@ public class MainActivity extends ActionBarActivity {
                     hmeterV = 0;
                     accMin = 100;
                     accMax = -100;
+                    prevSecond=0;
+                    prevMeters=0;
                     accList.clear();
+                    secChanges.clear();
+                    meterChanges.clear();
                     hmeterEnabledT0 = System.currentTimeMillis();
                 }
                 return false;   //  the listener has NOT consumed the event, pass it on
