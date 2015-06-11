@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.support.v7.app.ActionBarActivity;
@@ -27,14 +28,21 @@ public class MainActivity extends ActionBarActivity {
     class Floor extends SurfaceView{
         Paint paintText = new Paint(){{
             setStyle(Paint.Style.FILL);
-            setColor(Color.BLUE);
+            setColor(Color.GREEN);
             setTextSize(80);
+
         }};
         Paint paintRect = new Paint(){{
             setStyle(Style.STROKE);
-            setColor(Color.WHITE);
+            setColor(Color.GREEN);
         }};
         int floor=1;
+        private final Rect textBounds = new Rect(); //don't new this up in a draw method
+
+        public void drawTextCentred(Canvas canvas, Paint paint, String text, float cx, float cy){
+            paint.getTextBounds(text, 0, text.length(), textBounds);
+            canvas.drawText(text, cx - textBounds.exactCenterX(), cy - textBounds.exactCenterY(), paint);
+        }
 
         public Floor(Context context) {
             super(context);
@@ -46,9 +54,15 @@ public class MainActivity extends ActionBarActivity {
         @Override
         protected void onDraw(Canvas canvas) {
             String txt = ""+floor;
-            canvas.drawText(txt, (canvas.getWidth()-paintText.measureText(txt))/2, 50, paintText);
+            float txtWidth = paintText.measureText(txt);
+            float txtStart = (canvas.getWidth()-txtWidth)/2;
 
-            canvas.drawRect(0, 0, canvas.getWidth() - 1, canvas.getHeight() - 1, paintRect);
+            //canvas.drawText(txt, txtStart, 50, paintText);
+            drawTextCentred(canvas, paintText, txt, txtStart+txtWidth/2, 10 + paintText.getTextSize()/2);
+
+            canvas.drawRect(txtStart-5, 10, txtStart+txtWidth+5, 10+paintText.getTextSize(), paintRect);
+
+            canvas.drawRect(3, 3, canvas.getWidth() - 3, canvas.getHeight() - 3, paintRect);
         }
         void incr(int delta){
             floor += delta;
