@@ -12,7 +12,7 @@ import java.util.List;
  * Created by denny on 6/11/15.
  */
 abstract class AccListener implements SensorEventListener {
-    private final SurfaceView graph;
+    final static float FLOOR_H = 2.9f; // meters
 
     long tprevAccNanos = System.currentTimeMillis();
 
@@ -28,8 +28,7 @@ abstract class AccListener implements SensorEventListener {
     boolean avgEnabled = false;
     Avg avgGravity = new Avg();
 
-    public AccListener(SurfaceView graph) {
-        this.graph = graph;
+    public AccListener() {
     }
 
     void reset() {
@@ -39,6 +38,12 @@ abstract class AccListener implements SensorEventListener {
     }
 
     abstract void avgText(String txt);
+    abstract void setShiftText(String line1, String line2);
+    abstract void postInvalidate();
+
+    double getFloorDelta(){
+        return hmeter / FLOOR_H;
+    }
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
@@ -60,12 +65,12 @@ abstract class AccListener implements SensorEventListener {
                 hmeterEnabledT0 = 0; // disabled
             }
             long dtNanos = sensorEvent.timestamp - tprevAccNanos;
-            double acc = accAll - avgGravity.avg();
+            double acc = accAll - avgGravity.avg(); // - 0.06;
             accMin = Math.min(acc, accMin);
             accMax = Math.max(acc, accMax);
             if (accList.size() < 1500) {
                 accList.add(acc);
-                graph.postInvalidate();
+                postInvalidate();
             }
             hmeterV += acc * dtNanos / 1_000_000_000;
             hmeter += hmeterV * dtNanos / 1_000_000_000;
@@ -83,8 +88,6 @@ abstract class AccListener implements SensorEventListener {
 
         tprevAccNanos = sensorEvent.timestamp;
     }
-
-    protected abstract void setShiftText(String line1, String line2);
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {

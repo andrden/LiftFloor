@@ -53,18 +53,33 @@ public class MainActivity extends ActionBarActivity {
         }
         @Override
         protected void onDraw(Canvas canvas) {
-            String txt = ""+floor;
-            float txtWidth = paintText.measureText(txt);
-            float txtStart = (canvas.getWidth()-txtWidth)/2;
+            float floorDelta = (float)accListener.getFloorDelta();
+            float shift = floorDelta - (int)floorDelta;
+            int newfloor = floor + (int)floorDelta;
+            
+            float maxTxtWidth=0;
+            for( int i=-1; i<=1; i++ ) {
+                String txt = "" + (newfloor+i);
+                float txtWidth = paintText.measureText(txt);
+                maxTxtWidth = Math.max(maxTxtWidth, txtWidth);
+                float txtStart = (canvas.getWidth() - txtWidth) / 2;
 
-            //canvas.drawText(txt, txtStart, 50, paintText);
-            drawTextCentred(canvas, paintText, txt, txtStart+txtWidth/2, 10 + paintText.getTextSize()/2);
+                //canvas.drawText(txt, txtStart, 50, paintText);
+                float y = (float)(10 + paintText.getTextSize() * (0.5 + shift - i));
+                drawTextCentred(canvas, paintText, txt, txtStart + txtWidth / 2, y);
+            }
 
-            canvas.drawRect(txtStart-5, 10, txtStart+txtWidth+5, 10+paintText.getTextSize(), paintRect);
+            float txtStart = (canvas.getWidth() - maxTxtWidth) / 2;
+            canvas.drawRect(txtStart - 5, 10, txtStart + maxTxtWidth + 5, 10 + paintText.getTextSize(), paintRect);
 
             canvas.drawRect(3, 3, canvas.getWidth() - 3, canvas.getHeight() - 3, paintRect);
         }
         void incr(int delta){
+            if( accListener.getFloorDelta()!=0 ) {
+                floor += Math.round(accListener.getFloorDelta());
+                accListener.hmeter = 0;
+                accListener.hmeterEnabledT0 = 0; // stop on swipe
+            }
             floor += delta;
             this.postInvalidate();
         }
@@ -125,7 +140,7 @@ public class MainActivity extends ActionBarActivity {
         OnSwipeTouchListener onTouchListener = new OnSwipeTouchListener(this) {
             public void onSwipeTop() {
                 //Toast.makeText(MainActivity.this, "top", Toast.LENGTH_SHORT).show();
-                floor.incr(+1);
+                floor.incr(-1);
             }
 
             public void onSwipeRight() {
@@ -137,7 +152,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onSwipeBottom() {
-                floor.incr(-1);
+                floor.incr(+1);
                 //Toast.makeText(MainActivity.this, "bottom", Toast.LENGTH_SHORT).show();
             }
 
@@ -151,7 +166,7 @@ public class MainActivity extends ActionBarActivity {
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        accListener = new AccListener(graph){
+        accListener = new AccListener(){
 
             @Override
             void avgText(String txt) {
@@ -166,6 +181,12 @@ public class MainActivity extends ActionBarActivity {
 
                 TextView tv2 = (TextView) findViewById(R.id.xyz2);
                 tv2.setText(line2);
+            }
+
+            @Override
+            void postInvalidate() {
+                graph.postInvalidate();
+                floor.postInvalidate();
             }
         };
 
