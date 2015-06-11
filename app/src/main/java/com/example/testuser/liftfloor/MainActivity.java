@@ -17,6 +17,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,38 @@ public class MainActivity extends ActionBarActivity {
         void reset(){
             count=0;
             sum=0;
+        }
+    }
+
+    class Floor extends SurfaceView{
+        Paint paintText = new Paint(){{
+            setStyle(Paint.Style.FILL);
+            setColor(Color.BLUE);
+            setTextSize(80);
+        }};
+        Paint paintRect = new Paint(){{
+            setStyle(Style.STROKE);
+            setColor(Color.WHITE);
+        }};
+        int floor=1;
+
+        public Floor(Context context) {
+            super(context);
+
+            // This call is necessary, or else the
+            // draw method will not be called.
+            setWillNotDraw(false);
+        }
+        @Override
+        protected void onDraw(Canvas canvas) {
+            String txt = ""+floor;
+            canvas.drawText(txt, (canvas.getWidth()-paintText.measureText(txt))/2, 50, paintText);
+
+            canvas.drawRect(0, 0, canvas.getWidth() - 1, canvas.getHeight() - 1, paintRect);
+        }
+        void incr(int delta){
+            floor += delta;
+            this.postInvalidate();
         }
     }
 
@@ -111,7 +144,33 @@ public class MainActivity extends ActionBarActivity {
 
         final Graph graph = new Graph(this);
         ((FrameLayout)findViewById(R.id.graphLayout)).addView(graph);
-        //graph.postInvalidateDelayed(3000);
+        final Floor floor = new Floor(this);
+        ((FrameLayout)findViewById(R.id.floorNumber)).addView(floor);
+        OnSwipeTouchListener onTouchListener = new OnSwipeTouchListener(this) {
+            public void onSwipeTop() {
+                //Toast.makeText(MainActivity.this, "top", Toast.LENGTH_SHORT).show();
+                floor.incr(+1);
+            }
+
+            public void onSwipeRight() {
+                //Toast.makeText(MainActivity.this, "right", Toast.LENGTH_SHORT).show();
+            }
+
+            public void onSwipeLeft() {
+                //Toast.makeText(MainActivity.this, "left", Toast.LENGTH_SHORT).show();
+            }
+
+            public void onSwipeBottom() {
+                floor.incr(-1);
+                //Toast.makeText(MainActivity.this, "bottom", Toast.LENGTH_SHORT).show();
+            }
+
+            public boolean onTouch(View v, MotionEvent event) {
+                return gestureDetector.onTouchEvent(event);
+            }
+        };
+        floor.setOnTouchListener(onTouchListener);
+        graph.setOnTouchListener(onTouchListener);
 
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
