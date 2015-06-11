@@ -5,8 +5,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -17,10 +15,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -28,39 +22,7 @@ public class MainActivity extends ActionBarActivity {
     SensorManager senSensorManager;
 
     Sensor senAccelerometer;
-    SensorEventListener accListener;
-    long tprevAccNanos=System.currentTimeMillis();
-
-    long hmeterEnabledT0=0;
-    double hmeter = 0;
-    double hmeterV = 0;
-    double accMin, accMax;
-    long prevSecond, prevMeters;
-    List<Double> accList = new ArrayList<>();
-    List<Integer> secChanges = new ArrayList<>();
-    List<Integer> meterChanges = new ArrayList<>();
-
-    boolean avgEnabled=false;
-    Avg avgGravity = new Avg();
-
-    class Avg{
-        int count=0;
-        double sum=0;
-        void add(float v){
-            sum += v;
-            count++;
-        }
-        double avg(){
-            if( count < 1 ){
-                return 0;
-            }
-            return sum / count;
-        }
-        void reset(){
-            count=0;
-            sum=0;
-        }
-    }
+    AccListener accListener;
 
     class Floor extends SurfaceView{
         Paint paintText = new Paint(){{
@@ -120,14 +82,14 @@ public class MainActivity extends ActionBarActivity {
         protected void onDraw(Canvas canvas) {
             canvas.drawCircle(50, 50, 30, paintGreen);
 
-            for( int i=0; i<accList.size(); i++ ){
-                int x = (int)(canvas.getWidth() * (1 + accList.get(i))/2);
+            for( int i=0; i<accListener.accList.size(); i++ ){
+                int x = (int)(canvas.getWidth() * (1 + accListener.accList.get(i))/2);
                 canvas.drawCircle(x,i/2,2, paintGreen);
             }
-            for( int i : meterChanges ){
+            for( int i : accListener.meterChanges ){
                 canvas.drawRect(0,i/2,50,i/2+2, paintRed);
             }
-            for( int i : secChanges ){
+            for( int i : accListener.secChanges ){
                 canvas.drawRect(150,i/2,200,i/2+1, paintWhite);
             }
         }
@@ -175,56 +137,21 @@ public class MainActivity extends ActionBarActivity {
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        accListener = new SensorEventListener() {
+        accListener = new AccListener(graph){
+
             @Override
-            public void onSensorChanged(SensorEvent sensorEvent) {
-                float x = sensorEvent.values[0];
-                float y = sensorEvent.values[1];
-                float z = sensorEvent.values[2];
-                double accAll = Math.sqrt(x*x+y*y+z*z);
-
-                if( avgEnabled ) {
-                    avgGravity.add((float)accAll);
-                    TextView tvAvg = (TextView) findViewById(R.id.xyzAvg);
-                    tvAvg.setText(String.format("avg=%.3f %d", avgGravity.avg(), avgGravity.count));
-                }
-
-                if( hmeterEnabledT0>0 ) {
-                    long sec = (System.currentTimeMillis() - hmeterEnabledT0)/1000;
-                    boolean secChange = prevSecond != sec;
-                    prevSecond = sec;
-                    if( sec > 20 ){
-                        hmeterEnabledT0 = 0; // disabled
-                    }
-                    long dtNanos = sensorEvent.timestamp - tprevAccNanos;
-                    double acc = accAll - avgGravity.avg();
-                    accMin = Math.min(acc, accMin);
-                    accMax = Math.max(acc, accMax);
-                    if( accList.size()<1500 ){
-                        accList.add(acc);
-                        graph.postInvalidate();
-                    }
-                    hmeterV += acc * dtNanos / 1_000_000_000;
-                    hmeter += hmeterV * dtNanos / 1_000_000_000;
-                    long newHmeter = (int)Math.abs(hmeter);
-                    boolean meterChange = prevMeters != newHmeter;
-                    prevMeters = newHmeter;
-
-                    if( secChange ) secChanges.add(accList.size());
-                    if( meterChange ) meterChanges.add(accList.size());
-
-                    TextView tv = (TextView) findViewById(R.id.xyz);
-                    tv.setText(String.format("Shift %.2f m, acc %.2f .. %.2f",hmeter, accMin, accMax));
-
-                    TextView tv2 = (TextView) findViewById(R.id.xyz2);
-                    tv2.setText(String.format("sec=%d, dtMs=%d", sec, dtNanos/1_000_000));
-                }
-
-                tprevAccNanos = sensorEvent.timestamp;
+            void avgText(String txt) {
+                TextView tvAvg = (TextView) findViewById(R.id.xyzAvg);
+                tvAvg.setText(txt);
             }
 
             @Override
-            public void onAccuracyChanged(Sensor sensor, int i) {
+            protected void setShiftText(String line1, String line2) {
+                TextView tv = (TextView) findViewById(R.id.xyz);
+                tv.setText(line1);
+
+                TextView tv2 = (TextView) findViewById(R.id.xyz2);
+                tv2.setText(line2);
             }
         };
 
@@ -235,21 +162,9 @@ public class MainActivity extends ActionBarActivity {
             public boolean onTouch(View v, MotionEvent event) {
                 int action = event.getAction();
                 if (action == MotionEvent.ACTION_DOWN) {
-                    avgGravity.reset();
-                    avgEnabled = true;
-                    hmeterEnabledT0 = 0; // disabled
+                    accListener.reset();
                 }else if (action == MotionEvent.ACTION_UP) {
-                    avgEnabled = false;
-                    hmeter = 0;
-                    hmeterV = 0;
-                    accMin = 100;
-                    accMax = -100;
-                    prevSecond=0;
-                    prevMeters=0;
-                    accList.clear();
-                    secChanges.clear();
-                    meterChanges.clear();
-                    hmeterEnabledT0 = System.currentTimeMillis();
+                    accListener.start();
                 }
                 return false;   //  the listener has NOT consumed the event, pass it on
             }
@@ -290,8 +205,6 @@ public class MainActivity extends ActionBarActivity {
         super.onResume();
         senSensorManager.registerListener(accListener, senAccelerometer, SENSOR_DELAY);
     }
-
-
 
 
 }
