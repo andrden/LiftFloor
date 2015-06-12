@@ -54,6 +54,8 @@ public class MainActivity extends ActionBarActivity {
         @Override
         protected void onDraw(Canvas canvas) {
             float floorDelta = (float)accListener.getFloorDelta();
+            if( floorDelta>20 ) floorDelta=20;
+            if( floorDelta<-20 ) floorDelta=-20;
             float shift = floorDelta - (int)floorDelta;
             int newfloor = floor + (int)floorDelta;
             
@@ -154,6 +156,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onSwipeRight() {
+                floor.incr(1-floor.floor);
                 //Toast.makeText(MainActivity.this, "right", Toast.LENGTH_SHORT).show();
             }
 
