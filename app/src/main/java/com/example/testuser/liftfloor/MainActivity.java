@@ -90,6 +90,10 @@ public class MainActivity extends ActionBarActivity {
             setStyle(Paint.Style.FILL);
             setColor(Color.GREEN);
         }};
+        Paint paintCyan = new Paint(){{
+            setStyle(Paint.Style.FILL);
+            setColor(Color.CYAN);
+        }};
         Paint paintRed = new Paint(){{
             setStyle(Paint.Style.FILL);
             setColor(Color.RED);
@@ -111,9 +115,15 @@ public class MainActivity extends ActionBarActivity {
         protected void onDraw(Canvas canvas) {
             canvas.drawCircle(50, 50, 30, paintGreen);
 
+            int velocityXPrev=0;
             for( int i=0; i<accListener.accList.size(); i++ ){
                 int x = (int)(canvas.getWidth() * (1 + accListener.accList.get(i))/2);
                 canvas.drawCircle(x,i/2,2, paintGreen);
+
+                double SPEED_MAX=2;
+                int velocityX = (int)(canvas.getWidth() * (1 + accListener.speedList.get(i)/SPEED_MAX)/2);
+                canvas.drawLine(velocityXPrev,(i-1)/2.f, velocityX, i/2.f, paintCyan );
+                velocityXPrev = velocityX;
             }
             for( int i : accListener.meterChanges ){
                 canvas.drawRect(0,i/2,50,i/2+2, paintRed);

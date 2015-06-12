@@ -19,9 +19,10 @@ abstract class AccListener implements SensorEventListener {
     long hmeterEnabledT0 = 0;
     double hmeter = 0;
     double hmeterV = 0;
-    double accMin, accMax;
+    //double accMin, accMax;
     long prevSecond, prevMeters;
     List<Double> accList = new ArrayList<>();
+    List<Double> speedList = new ArrayList<>();
     List<Integer> secChanges = new ArrayList<>();
     List<Integer> meterChanges = new ArrayList<>();
 
@@ -66,13 +67,14 @@ abstract class AccListener implements SensorEventListener {
             }
             long dtNanos = sensorEvent.timestamp - tprevAccNanos;
             double acc = accAll - avgGravity.avg(); // - 0.06;
-            accMin = Math.min(acc, accMin);
-            accMax = Math.max(acc, accMax);
+//            accMin = Math.min(acc, accMin);
+//            accMax = Math.max(acc, accMax);
+            hmeterV += acc * dtNanos / 1_000_000_000;
             if (accList.size() < 1500) {
                 accList.add(acc);
+                speedList.add(hmeterV);
                 postInvalidate();
             }
-            hmeterV += acc * dtNanos / 1_000_000_000;
             hmeter += hmeterV * dtNanos / 1_000_000_000;
             long newHmeter = (int) Math.abs(hmeter);
             boolean meterChange = prevMeters != newHmeter;
@@ -81,8 +83,10 @@ abstract class AccListener implements SensorEventListener {
             if (secChange) secChanges.add(accList.size());
             if (meterChange) meterChanges.add(accList.size());
 
+            //String shiftStr = String.format("Shift %.2f m, acc %.2f .. %.2f", hmeter, accMin, accMax);
+            String shiftStr = String.format("Shift %.2f m, speed %.2f m/s", hmeter, hmeterV);
             setShiftText(
-                    String.format("Shift %.2f m, acc %.2f .. %.2f", hmeter, accMin, accMax),
+                    shiftStr,
                     String.format("sec=%d, dtMs=%d", sec, dtNanos / 1_000_000));
         }
 
@@ -97,11 +101,12 @@ abstract class AccListener implements SensorEventListener {
         avgEnabled = false;
         hmeter = 0;
         hmeterV = 0;
-        accMin = 100;
-        accMax = -100;
+//        accMin = 100;
+//        accMax = -100;
         prevSecond = 0;
         prevMeters = 0;
         accList.clear();
+        speedList.clear();
         secChanges.clear();
         meterChanges.clear();
         hmeterEnabledT0 = System.currentTimeMillis();
