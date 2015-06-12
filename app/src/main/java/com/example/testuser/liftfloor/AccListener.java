@@ -16,9 +16,10 @@ abstract class AccListener implements SensorEventListener {
 
     long tprevAccNanos = System.currentTimeMillis();
 
-    long hmeterEnabledT0 = 0;
+    private long hmeterEnabledT0 = 0;
     double hmeter = 0;
-    double hmeterV = 0;
+    private double hmeterV = 0;
+    boolean vfastReached, vslowReached;
     //double accMin, accMax;
     long prevSecond, prevMeters;
     List<Double> accList = new ArrayList<>();
@@ -29,7 +30,10 @@ abstract class AccListener implements SensorEventListener {
     boolean avgEnabled = false;
     Avg avgGravity = new Avg();
 
-    public AccListener() {
+    Sounds sounds;
+
+    public AccListener(Sounds sounds) {
+        this.sounds = sounds;
     }
 
     void reset() {
@@ -38,12 +42,24 @@ abstract class AccListener implements SensorEventListener {
         hmeterEnabledT0 = 0; // disabled
     }
 
+    void userStop(){
+        hmeter = 0;
+        hmeterEnabledT0 = 0; // stop on swipe
+    }
+
     abstract void avgText(String txt);
     abstract void setShiftText(String line1, String line2);
     abstract void postInvalidate();
 
     double getFloorDelta(){
         return hmeter / FLOOR_H;
+    }
+
+    void clickAndStop(){
+        if( hmeterEnabledT0 != 0 ) {
+            sounds.sound();
+        }
+        hmeterEnabledT0 = 0;
     }
 
     @Override
@@ -62,9 +78,6 @@ abstract class AccListener implements SensorEventListener {
             long sec = (System.currentTimeMillis() - hmeterEnabledT0) / 1000;
             boolean secChange = prevSecond != sec;
             prevSecond = sec;
-            if (sec > 20) {
-                hmeterEnabledT0 = 0; // disabled
-            }
             long dtNanos = sensorEvent.timestamp - tprevAccNanos;
             double acc = accAll - avgGravity.avg(); // - 0.06;
 //            accMin = Math.min(acc, accMin);
@@ -75,6 +88,7 @@ abstract class AccListener implements SensorEventListener {
                 speedList.add(hmeterV);
                 postInvalidate();
             }
+            autoStopLogic(sec);
             hmeter += hmeterV * dtNanos / 1_000_000_000;
             long newHmeter = (int) Math.abs(hmeter);
             boolean meterChange = prevMeters != newHmeter;
@@ -93,6 +107,25 @@ abstract class AccListener implements SensorEventListener {
         tprevAccNanos = sensorEvent.timestamp;
     }
 
+    private void autoStopLogic(long sec) {
+        if (sec > 20) {
+            clickAndStop(); // disabled
+        }
+        if( Math.abs(hmeterV)>0.5 ){
+            vfastReached = true;
+        }
+        if( vfastReached ){
+            if( Math.abs(hmeterV)<0.03 ){
+                vslowReached = true;
+            }
+        }
+        if( vslowReached && Math.abs(hmeterV)>0.06 ){
+            clickAndStop();
+            // we had fast motion and then nearly stopped (lift came to its destination),
+            // we have to stop tracking if we abruptly move phone by hand
+        }
+    }
+
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
     }
@@ -101,6 +134,8 @@ abstract class AccListener implements SensorEventListener {
         avgEnabled = false;
         hmeter = 0;
         hmeterV = 0;
+        vfastReached = false;
+        vslowReached = false;
 //        accMin = 100;
 //        accMax = -100;
         prevSecond = 0;

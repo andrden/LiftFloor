@@ -24,6 +24,7 @@ public class MainActivity extends ActionBarActivity {
 
     Sensor senAccelerometer;
     AccListener accListener;
+    Sounds sounds;
 
     class Floor extends SurfaceView{
         Paint paintText = new Paint(){{
@@ -79,8 +80,7 @@ public class MainActivity extends ActionBarActivity {
         void incr(int delta){
             if( accListener.getFloorDelta()!=0 ) {
                 floor += Math.round(accListener.getFloorDelta());
-                accListener.hmeter = 0;
-                accListener.hmeterEnabledT0 = 0; // stop on swipe
+                accListener.userStop(); // stop on swipe
             }
             floor += delta;
             this.postInvalidate();
@@ -145,6 +145,8 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        sounds = new Sounds(this);
+
         final Graph graph = new Graph(this);
         ((FrameLayout)findViewById(R.id.graphLayout)).addView(graph);
         final Floor floor = new Floor(this);
@@ -179,7 +181,7 @@ public class MainActivity extends ActionBarActivity {
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        accListener = new AccListener(){
+        accListener = new AccListener(sounds){
 
             @Override
             void avgText(String txt) {
